@@ -6,5 +6,5 @@ fn main() {
         .expect("Usage: dump_file <PATH_TO_IBT>");
     let file = IbtFile::from_file(&file_name).unwrap();
 
-    dbg!(&file.header, &file.disk_sub_header);
+    dbg!(&file.header, &file.disk_sub_header, &file.var_headers);
 }

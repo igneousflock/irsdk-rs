@@ -5,7 +5,7 @@ use saphyr::LoadableYamlNode;
 
 use crate::{
     raw,
-    telemetry::{DiskSubHeader, Header},
+    telemetry::{DiskSubHeader, Header, VarHeader},
 };
 
 #[derive(Clone, Debug)]
@@ -14,6 +14,8 @@ pub struct IbtFile {
 
     pub header: Header,
     pub disk_sub_header: DiskSubHeader,
+
+    pub var_headers: Vec<VarHeader>,
 }
 
 impl IbtFile {
@@ -28,10 +30,19 @@ impl IbtFile {
         );
         let sub_header = DiskSubHeader::from_raw(&raw_sub_header);
 
+        let var_headers_offset = raw_header.var_header_offset as usize;
+        let var_headers_len = raw::VAR_HEADER_SIZE * raw_header.num_vars as usize;
+        let vh_slice = &data[var_headers_offset..var_headers_offset + var_headers_len];
+        let var_headers = raw::VarHeader::slice_from_fraw_bytes(vh_slice)
+            .iter()
+            .map(VarHeader::from_raw)
+            .collect();
+
         Ok(Self {
             data,
             header,
             disk_sub_header: sub_header,
+            var_headers,
         })
     }
 

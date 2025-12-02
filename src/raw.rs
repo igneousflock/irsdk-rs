@@ -1,4 +1,4 @@
-use std::ffi::{c_double, c_int};
+use std::ffi::{c_char, c_double, c_int};
 
 use bytemuck::{AnyBitPattern, Pod, Zeroable};
 
@@ -6,6 +6,8 @@ use bytemuck::{AnyBitPattern, Pod, Zeroable};
 type time_t = i64;
 
 const IRSDK_MAX_BUFS: usize = 4;
+const IRSDK_MAX_STRING: usize = 32;
+const IRSDK_MAX_DESC: usize = 64;
 
 /// The alignment of the [`Header`] type, should always be 16
 ///
@@ -16,6 +18,7 @@ pub const ALIGNMENT: usize = std::mem::align_of::<Header>();
 
 pub const HEADER_SIZE: usize = std::mem::size_of::<Header>();
 pub const SUB_HEADER_SIZE: usize = std::mem::size_of::<DiskSubHeader>();
+pub const VAR_HEADER_SIZE: usize = std::mem::size_of::<VarHeader>();
 
 #[derive(Clone, Copy, Debug, AnyBitPattern)]
 #[repr(C, align(16))]
@@ -30,31 +33,31 @@ pub struct Header {
     /// Incremented when session info changes
     pub session_info_update: c_int,
     /// Length in bytes of the session info string
-    session_info_len: c_int,
+    pub session_info_len: c_int,
     /// Session info, encoded in YAML
-    session_info_offset: c_int,
+    pub session_info_offset: c_int,
 
     /// Length of the array pointed to by varHeaderOffset
-    num_vars: c_int,
+    pub num_vars: c_int,
     /// Offset to the `VarHeader` array, which describes the variables in [`VarBuf`]
-    var_header_offset: c_int,
+    pub var_header_offset: c_int,
 
     /// Number of variable buffers
-    num_buf: c_int,
+    pub num_buf: c_int,
     /// Length of each variable buffer
-    buf_len: c_int,
+    pub buf_len: c_int,
 
     /// Offsets to each of the variable buffers
-    var_bufs: [VarBuf; IRSDK_MAX_BUFS],
+    pub var_bufs: [VarBuf; IRSDK_MAX_BUFS],
 }
 
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
 #[repr(C, align(16))]
 pub struct VarBuf {
     /// Which tick this buffer represents
-    tick_count: c_int,
+    pub tick_count: c_int,
     /// Offset from the header
-    buf_offset: c_int,
+    pub buf_offset: c_int,
     _pad: [c_int; 2],
 }
 
@@ -73,22 +76,33 @@ pub struct DiskSubHeader {
     pub session_record_count: c_int,
 }
 
+#[derive(Clone, Copy, Debug, AnyBitPattern)]
+#[repr(C, align(16))]
+pub struct VarHeader {
+    pub ty: c_int,
+    pub offset: c_int,
+    pub count: c_int,
+    pub count_as_time: c_int,
+
+    pub name: [c_char; IRSDK_MAX_STRING],
+    pub desc: [c_char; IRSDK_MAX_DESC],
+    pub unit: [c_char; IRSDK_MAX_STRING],
+}
+
 impl Header {
     pub fn from_raw_bytes(bytes: &[u8]) -> Self {
         *bytemuck::from_bytes(bytes)
-    }
-
-    pub fn session_info_len(&self) -> i32 {
-        self.session_info_len
-    }
-
-    pub fn session_info_offset(&self) -> i32 {
-        self.session_info_offset
     }
 }
 
 impl DiskSubHeader {
     pub fn from_raw_bytes(bytes: &[u8]) -> Self {
         *bytemuck::from_bytes(bytes)
+    }
+}
+
+impl VarHeader {
+    pub fn slice_from_fraw_bytes(bytes: &[u8]) -> &[Self] {
+        bytemuck::cast_slice(bytes)
     }
 }
