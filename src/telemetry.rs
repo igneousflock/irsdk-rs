@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use chrono::{DateTime, Utc};
 
 use crate::raw;
@@ -10,11 +12,16 @@ pub struct Header {
 
 #[derive(Clone, Copy, Debug)]
 pub struct DiskSubHeader {
-    pub session_date: DateTime<Utc>,
+    /// Timestamp for the start of the session
+    pub date: DateTime<Utc>,
 
-    pub session_start_time: f64,
-    pub session_end_time: f64,
-    pub session_lap_count: u32,
+    /// How long into the session the run started
+    pub start_time: Duration,
+    /// How long into the session the run ended
+    pub end_time: Duration,
+
+    /// Number of laps run in the session
+    pub lap_count: u32,
 }
 
 impl Header {
@@ -29,10 +36,10 @@ impl Header {
 impl DiskSubHeader {
     pub fn from_raw(raw: &raw::DiskSubHeader) -> Self {
         Self {
-            session_date: DateTime::from_timestamp_secs(raw.session_start_date).unwrap(),
-            session_start_time: raw.session_start_time,
-            session_end_time: raw.session_end_time,
-            session_lap_count: raw.session_lap_count.try_into().unwrap(),
+            date: DateTime::from_timestamp_secs(raw.session_start_date).unwrap(),
+            start_time: Duration::from_secs_f64(raw.session_start_time),
+            end_time: Duration::from_secs_f64(raw.session_end_time),
+            lap_count: raw.session_lap_count.try_into().unwrap(),
         }
     }
 }

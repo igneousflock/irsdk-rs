@@ -20,38 +20,57 @@ pub const SUB_HEADER_SIZE: usize = std::mem::size_of::<DiskSubHeader>();
 #[derive(Clone, Copy, Debug, AnyBitPattern)]
 #[repr(C, align(16))]
 pub struct Header {
-    ver: c_int,
-    status: c_int,
+    // TODO: add assertions on this field
+    /// API header version, should always be 2
+    pub ver: c_int,
+    /// Connected status, should always be 1
+    pub status: c_int,
+    /// Ticks per second (60 or 360)
     pub tick_rate: c_int,
+    /// Incremented when session info changes
     pub session_info_update: c_int,
+    /// Length in bytes of the session info string
     session_info_len: c_int,
+    /// Session info, encoded in YAML
     session_info_offset: c_int,
 
+    /// Length of the array pointed to by varHeaderOffset
     num_vars: c_int,
+    /// Offset to the `VarHeader` array, which describes the variables in [`VarBuf`]
     var_header_offset: c_int,
 
+    /// Number of variable buffers
     num_buf: c_int,
+    /// Length of each variable buffer
     buf_len: c_int,
 
+    /// Offsets to each of the variable buffers
     var_bufs: [VarBuf; IRSDK_MAX_BUFS],
-}
-
-#[derive(Clone, Copy, Debug, AnyBitPattern)]
-#[repr(C, align(16))]
-pub struct DiskSubHeader {
-    pub session_start_date: time_t,
-    pub session_start_time: c_double,
-    pub session_end_time: c_double,
-    pub session_lap_count: c_int,
-    pub session_record_count: c_int,
 }
 
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
 #[repr(C, align(16))]
 pub struct VarBuf {
+    /// Which tick this buffer represents
     tick_count: c_int,
+    /// Offset from the header
     buf_offset: c_int,
     _pad: [c_int; 2],
+}
+
+#[derive(Clone, Copy, Debug, AnyBitPattern)]
+#[repr(C, align(16))]
+pub struct DiskSubHeader {
+    /// Timestamp for the start of the session, seconds since epoch
+    pub session_start_date: time_t,
+    /// How long into the session the run started, in seconds
+    pub session_start_time: c_double,
+    /// How long into the session the run ended, in seconds
+    pub session_end_time: c_double,
+    /// Number of laps run in the session
+    pub session_lap_count: c_int,
+    /// Number of records in the file
+    pub session_record_count: c_int,
 }
 
 impl Header {
