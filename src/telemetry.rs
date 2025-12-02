@@ -34,7 +34,7 @@ pub struct DiskSubHeader {
     pub lap_count: u32,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, serde::Serialize)]
 pub enum VarType {
     Char,
     Bool,
@@ -44,7 +44,7 @@ pub enum VarType {
     Double,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize)]
 pub struct VarHeader {
     pub ty: VarType,
     pub offset: usize,

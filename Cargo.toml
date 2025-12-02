@@ -8,6 +8,7 @@ aligned-vec = "0.6.4"
 bytemuck = { version = "1.24.0", features = ["derive"] }
 chrono = "0.4.42"
 saphyr = "0.0.6"
+serde = { version = "1.0.228", features = ["derive"] }
 
 [lints.clippy]
 cloned_instead_of_copied = "warn"
@@ -42,4 +43,7 @@ unnested_or_patterns = "warn"
 unused_self = "warn"
 used_underscore_binding = "warn"
 unwrap_used = "warn"
+
+[dev-dependencies]
+csv = "1.4.0"
 
