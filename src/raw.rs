@@ -13,6 +13,7 @@ const IRSDK_MAX_BUFS: usize = 4;
 /// assert_eq!(irsdk::raw::ALIGNMENT, 16);
 /// ```
 pub const ALIGNMENT: usize = std::mem::align_of::<Header>();
+
 pub const HEADER_SIZE: usize = std::mem::size_of::<Header>();
 pub const SUB_HEADER_SIZE: usize = std::mem::size_of::<DiskSubHeader>();
 
@@ -21,12 +22,12 @@ pub const SUB_HEADER_SIZE: usize = std::mem::size_of::<DiskSubHeader>();
 pub struct Header {
     ver: c_int,
     status: c_int,
-    tick_rate: c_int,
-    session_info_update: c_int,
+    pub tick_rate: c_int,
+    pub session_info_update: c_int,
     session_info_len: c_int,
     session_info_offset: c_int,
 
-    num_var: c_int,
+    num_vars: c_int,
     var_header_offset: c_int,
 
     num_buf: c_int,
@@ -38,11 +39,11 @@ pub struct Header {
 #[derive(Clone, Copy, Debug, AnyBitPattern)]
 #[repr(C, align(16))]
 pub struct DiskSubHeader {
-    session_start_date: time_t,
-    session_start_time: c_double,
-    session_end_time: c_double,
-    session_lap_count: c_int,
-    session_record_count: c_int,
+    pub session_start_date: time_t,
+    pub session_start_time: c_double,
+    pub session_end_time: c_double,
+    pub session_lap_count: c_int,
+    pub session_record_count: c_int,
 }
 
 #[derive(Clone, Copy, Debug, Pod, Zeroable)]
