@@ -4,7 +4,7 @@ use aligned_vec::{AVec, ConstAlign};
 
 use crate::{
     raw,
-    telemetry::{DiskHeader, Header},
+    telemetry::{DiskSubHeader, Header},
 };
 
 #[derive(Clone, Debug)]
@@ -12,7 +12,7 @@ pub struct IbtFile {
     _data: AVec<u8, ConstAlign<{ crate::raw::ALIGNMENT }>>,
 
     pub header: Header,
-    pub sub_header: DiskHeader,
+    pub disk_sub_header: DiskSubHeader,
 }
 
 impl IbtFile {
@@ -25,12 +25,12 @@ impl IbtFile {
         let raw_sub_header = raw::DiskSubHeader::from_raw_bytes(
             &data[raw::HEADER_SIZE..raw::HEADER_SIZE + raw::SUB_HEADER_SIZE],
         );
-        let sub_header = DiskHeader::from_raw(&raw_sub_header);
+        let sub_header = DiskSubHeader::from_raw(&raw_sub_header);
 
         Ok(Self {
             _data: data,
             header,
-            sub_header,
+            disk_sub_header: sub_header,
         })
     }
 }

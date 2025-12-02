@@ -9,7 +9,7 @@ pub struct Header {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct DiskHeader {
+pub struct DiskSubHeader {
     pub session_date: DateTime<Utc>,
 
     pub session_start_time: f64,
@@ -26,7 +26,7 @@ impl Header {
     }
 }
 
-impl DiskHeader {
+impl DiskSubHeader {
     pub fn from_raw(raw: &raw::DiskSubHeader) -> Self {
         Self {
             session_date: DateTime::from_timestamp_secs(raw.session_start_date).unwrap(),
