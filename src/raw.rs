@@ -77,6 +77,14 @@ impl Header {
     pub fn from_raw_bytes(bytes: &[u8]) -> Self {
         *bytemuck::from_bytes(bytes)
     }
+
+    pub fn session_info_len(&self) -> i32 {
+        self.session_info_len
+    }
+
+    pub fn session_info_offset(&self) -> i32 {
+        self.session_info_offset
+    }
 }
 
 impl DiskSubHeader {

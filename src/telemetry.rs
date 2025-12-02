@@ -7,7 +7,14 @@ use crate::raw;
 #[derive(Clone, Copy, Debug)]
 pub struct Header {
     pub tick_rate: u32,
+
+    /// Incremented when session info changes
     pub session_info_update: u32,
+
+    /// Length in bytes of the session info string
+    session_info_len: usize,
+    /// Session info, encoded in YAML
+    session_info_offset: usize,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -29,7 +36,17 @@ impl Header {
         Self {
             tick_rate: raw.tick_rate.try_into().unwrap(),
             session_info_update: raw.session_info_update.try_into().unwrap(),
+            session_info_len: raw.session_info_len().try_into().unwrap(),
+            session_info_offset: raw.session_info_offset().try_into().unwrap(),
         }
+    }
+
+    pub fn session_info_len(&self) -> usize {
+        self.session_info_len
+    }
+
+    pub fn session_info_offset(&self) -> usize {
+        self.session_info_offset
     }
 }
 
