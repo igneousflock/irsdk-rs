@@ -1,0 +1,8 @@
+[package]
+name = "irsdk"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+aligned-vec = "0.6.4"
+bytemuck = { version = "1.24.0", features = ["derive"] }
