@@ -59,10 +59,22 @@ pub struct VarHeader {
 impl Header {
     pub fn from_raw(raw: &raw::Header) -> Self {
         Self {
-            tick_rate: raw.tick_rate.try_into().unwrap(),
-            session_info_update: raw.session_info_update.try_into().unwrap(),
-            session_info_len: raw.session_info_len.try_into().unwrap(),
-            session_info_offset: raw.session_info_offset.try_into().unwrap(),
+            tick_rate: raw
+                .tick_rate
+                .try_into()
+                .expect("`tick_rate` should be positive"),
+            session_info_update: raw
+                .session_info_update
+                .try_into()
+                .expect("`session_info_update` should be positive"),
+            session_info_len: raw
+                .session_info_len
+                .try_into()
+                .expect("`session_info_len` should be positive"),
+            session_info_offset: raw
+                .session_info_offset
+                .try_into()
+                .expect("`session_info_offset` should be positive"),
         }
     }
 
@@ -78,10 +90,14 @@ impl Header {
 impl DiskSubHeader {
     pub fn from_raw(raw: &raw::DiskSubHeader) -> Self {
         Self {
-            date: DateTime::from_timestamp_secs(raw.session_start_date).unwrap(),
+            date: DateTime::from_timestamp_secs(raw.session_start_date)
+                .expect("`session_start_date` should be a valid timestamp"),
             start_time: Duration::from_secs_f64(raw.session_start_time),
             end_time: Duration::from_secs_f64(raw.session_end_time),
-            lap_count: raw.session_lap_count.try_into().unwrap(),
+            lap_count: raw
+                .session_lap_count
+                .try_into()
+                .expect("`session_lap_count` should be positive"),
         }
     }
 }
@@ -100,8 +116,8 @@ impl VarHeader {
 
         Self {
             ty,
-            offset: raw.offset.try_into().unwrap(),
-            count: raw.count.try_into().unwrap(),
+            offset: raw.offset.try_into().expect("`offset` to be positive"),
+            count: raw.count.try_into().expect("`count` to be positive"),
             count_as_time: raw.count_as_time == 0,
             name: string_from_c_chars(&raw.name),
             description: string_from_c_chars(&raw.desc),
