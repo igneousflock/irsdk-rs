@@ -32,4 +32,4 @@ macro_rules! impl_from_aligned {
     };
 }
 
-impl_from_aligned! { Aligned for [u32, f32, f64] }
+impl_from_aligned! { Aligned for [u32, i32, f32, f64] }

@@ -39,7 +39,7 @@ impl<'data> Sample<'data> {
 pub enum Value {
     Char(char),
     Bool(bool),
-    Int(u32),
+    Int(i32),
     Bitfield(u32),
     Float(f32),
     Double(f64),
