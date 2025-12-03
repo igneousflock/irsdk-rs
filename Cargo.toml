@@ -7,6 +7,7 @@ edition = "2024"
 aligned-vec = "0.6.4"
 bytemuck = { version = "1.24.0", features = ["derive"] }
 chrono = "0.4.42"
+indexmap = "2.12.1"
 saphyr = "0.0.6"
 serde = { version = "1.0.228", features = ["derive"] }
 

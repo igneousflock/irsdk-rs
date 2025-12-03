@@ -1,13 +1,16 @@
-use std::{
-    ffi::{CStr, c_char},
-    time::Duration,
-};
+mod record;
+mod var;
+
+use std::time::Duration;
 
 use chrono::{DateTime, Utc};
 
 use crate::raw;
 
-#[derive(Clone, Copy, Debug)]
+pub use record::{Record, Sample, Value};
+pub use var::{VarHeader, VarSet, VarType};
+
+#[derive(Clone, Debug)]
 pub struct Header {
     pub tick_rate: u32,
 
@@ -15,9 +18,12 @@ pub struct Header {
     pub session_info_update: u32,
 
     /// Length in bytes of the session info string
-    session_info_len: usize,
+    pub session_info_len: usize,
     /// Session info, encoded in YAML
-    session_info_offset: usize,
+    pub session_info_offset: usize,
+
+    pub num_vars: usize,
+    pub buf_len: usize,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -32,28 +38,15 @@ pub struct DiskSubHeader {
 
     /// Number of laps run in the session
     pub lap_count: u32,
+
+    // Number of records in this file
+    pub record_count: usize,
 }
 
-#[derive(Clone, Copy, Debug, serde::Serialize)]
-pub enum VarType {
-    Char,
-    Bool,
-    Int,
-    Bitfield,
-    Float,
-    Double,
-}
-
-#[derive(Clone, Debug, serde::Serialize)]
-pub struct VarHeader {
-    pub ty: VarType,
-    pub offset: usize,
-    pub count: usize,
-    pub count_as_time: bool,
-
-    pub name: String,
-    pub description: String,
-    pub unit: String,
+#[derive(Clone, Copy, Debug)]
+pub struct VarBufInfo {
+    pub tick_count: usize,
+    pub buf_offset: usize,
 }
 
 impl Header {
@@ -75,6 +68,14 @@ impl Header {
                 .session_info_offset
                 .try_into()
                 .expect("`session_info_offset` should be positive"),
+            num_vars: raw
+                .num_vars
+                .try_into()
+                .expect("`num_vars` should be positive"),
+            buf_len: raw
+                .buf_len
+                .try_into()
+                .expect("`buf_len` should be positive"),
         }
     }
 
@@ -98,37 +99,25 @@ impl DiskSubHeader {
                 .session_lap_count
                 .try_into()
                 .expect("`session_lap_count` should be positive"),
+            record_count: raw
+                .session_record_count
+                .try_into()
+                .expect("`session_record_count` should be positive"),
         }
     }
 }
 
-impl VarHeader {
-    pub fn from_raw(raw: &raw::VarHeader) -> Self {
-        let ty = match raw.ty {
-            0 => VarType::Char,
-            1 => VarType::Bool,
-            2 => VarType::Int,
-            3 => VarType::Bitfield,
-            4 => VarType::Float,
-            5 => VarType::Double,
-            _ => panic!("invalid var type: `{}`", raw.ty),
-        };
-
+impl VarBufInfo {
+    pub fn from_raw(raw: &raw::VarBuf) -> Self {
         Self {
-            ty,
-            offset: raw.offset.try_into().expect("`offset` to be positive"),
-            count: raw.count.try_into().expect("`count` to be positive"),
-            count_as_time: raw.count_as_time == 0,
-            name: string_from_c_chars(&raw.name),
-            description: string_from_c_chars(&raw.desc),
-            unit: string_from_c_chars(&raw.unit),
+            tick_count: raw
+                .tick_count
+                .try_into()
+                .expect("`tick_count` to be positive"),
+            buf_offset: raw
+                .buf_offset
+                .try_into()
+                .expect("`buf_offset` to be positive"),
         }
     }
-}
-
-// TODO: There may be some weird encoding on these strings
-fn string_from_c_chars(buf: &[c_char]) -> String {
-    assert!(buf.contains(&0));
-    let cstr = unsafe { CStr::from_ptr(buf.as_ptr()) };
-    cstr.to_string_lossy().into_owned()
 }

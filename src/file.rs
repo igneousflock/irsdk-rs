@@ -5,7 +5,7 @@ use saphyr::LoadableYamlNode;
 
 use crate::{
     raw,
-    telemetry::{DiskSubHeader, Header, VarHeader},
+    telemetry::{DiskSubHeader, Header, Sample, VarBufInfo, VarHeader, VarSet},
 };
 
 #[derive(Clone, Debug)]
@@ -15,7 +15,9 @@ pub struct IbtFile {
     pub header: Header,
     pub disk_sub_header: DiskSubHeader,
 
-    pub var_headers: Vec<VarHeader>,
+    pub vars: VarSet,
+
+    pub var_buf_info: VarBufInfo,
 }
 
 impl IbtFile {
@@ -37,12 +39,16 @@ impl IbtFile {
             .iter()
             .map(VarHeader::from_raw)
             .collect();
+        let vars = VarSet::new(var_headers);
+
+        let var_buf_info = VarBufInfo::from_raw(&raw_header.var_bufs[0]);
 
         Ok(Self {
             data,
             header,
             disk_sub_header: sub_header,
-            var_headers,
+            vars,
+            var_buf_info,
         })
     }
 
@@ -56,5 +62,16 @@ impl IbtFile {
     pub fn session_data(&self) -> Result<saphyr::YamlOwned, saphyr::ScanError> {
         let docs = saphyr::YamlOwned::load_from_str(&self.raw_session_data())?;
         Ok(docs[0].clone())
+    }
+
+    pub fn sample(&self, idx: usize) -> Sample<'_> {
+        assert!(idx < self.disk_sub_header.record_count);
+        let len = self.header.buf_len;
+        let offset = self.var_buf_info.buf_offset + len * idx;
+        Sample::new(&self.data[offset..offset + len])
+    }
+
+    pub fn samples(&self) -> impl Iterator<Item = Sample<'_>> {
+        (0..self.disk_sub_header.record_count).map(|idx| self.sample(idx))
     }
 }

@@ -8,4 +8,5 @@ fn main() {
 
     println!("{:#?}", &file.header);
     println!("{:#?}", &file.disk_sub_header);
+    println!("{:#?}", &file.var_buf_info);
 }
