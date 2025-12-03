@@ -1,3 +1,7 @@
+//! Helper for ensuring raw bytes are aligned
+
+use std::mem::size_of;
+
 /// Wrapper for raw bytes that forces them to be aligned to `8`, the max alignment for SDK data
 /// types
 #[repr(align(8))]
@@ -10,20 +14,20 @@ impl<const SIZE: usize> Aligned<SIZE> {
     }
 }
 
-impl From<Aligned<4>> for u32 {
-    fn from(wrapper: Aligned<4>) -> Self {
+impl From<Aligned<{ size_of::<u32>() }>> for u32 {
+    fn from(wrapper: Aligned<{ size_of::<u32>() }>) -> Self {
         *bytemuck::from_bytes(&wrapper.0)
     }
 }
 
-impl From<Aligned<4>> for f32 {
-    fn from(wrapper: Aligned<4>) -> Self {
+impl From<Aligned<{ size_of::<f32>() }>> for f32 {
+    fn from(wrapper: Aligned<{ size_of::<f32>() }>) -> Self {
         *bytemuck::from_bytes(&wrapper.0)
     }
 }
 
-impl From<Aligned<8>> for f64 {
-    fn from(wrapper: Aligned<8>) -> Self {
+impl From<Aligned<{ size_of::<f64>() }>> for f64 {
+    fn from(wrapper: Aligned<{ size_of::<f64>() }>) -> Self {
         *bytemuck::from_bytes(&wrapper.0)
     }
 }

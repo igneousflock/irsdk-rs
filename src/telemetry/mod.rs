@@ -1,4 +1,4 @@
-mod record;
+mod sample;
 mod var;
 
 use std::time::Duration;
@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 
 use crate::raw;
 
-pub use record::{Record, Sample, Value};
+pub use sample::{Sample, Value};
 pub use var::{VarHeader, VarSet, VarType};
 
 #[derive(Clone, Debug)]
