@@ -1,3 +1,4 @@
+mod enums;
 mod sample;
 mod var;
 
@@ -7,6 +8,7 @@ use chrono::{DateTime, Utc};
 
 use crate::raw;
 
+pub use enums::{Enum, TrackLocation, TrackSurface};
 pub use sample::{Sample, Value};
 pub use var::{VarHeader, VarSet, VarType};
 

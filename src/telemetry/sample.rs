@@ -2,7 +2,7 @@ use bytemuck::pod_collect_to_vec;
 
 use crate::{
     aligned::align_cast,
-    telemetry::{VarHeader, VarType},
+    telemetry::{Enum, VarHeader, VarType},
 };
 
 pub struct Sample<'data>(&'data [u8]);
@@ -15,6 +15,10 @@ impl<'data> Sample<'data> {
     pub fn read_var(&self, var: &VarHeader) -> Value {
         let size = var.ty.size() * var.count;
         let slice = &self.0[var.offset..var.offset + size];
+
+        if let Some(e) = Enum::parse(slice, var.unit.as_str()) {
+            return Value::Enum(e);
+        }
 
         if var.count > 1 {
             match var.ty {
@@ -43,6 +47,8 @@ pub enum Value {
     Bitfield(u32),
     Float(f32),
     Double(f64),
+
+    Enum(Enum),
 
     IntArray(Vec<u32>),
     FloatArray(Vec<f32>),

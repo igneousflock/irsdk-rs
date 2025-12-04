@@ -8,6 +8,7 @@ aligned-vec = "0.6.4"
 bytemuck = { version = "1.24.0", features = ["derive", "extern_crate_alloc"] }
 chrono = "0.4.42"
 indexmap = "2.12.1"
+num_enum = "0.7.5"
 saphyr = "0.0.6"
 serde = { version = "1.0.228", features = ["derive"] }
 
