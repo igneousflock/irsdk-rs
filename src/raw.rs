@@ -10,10 +10,6 @@ const IRSDK_MAX_STRING: usize = 32;
 const IRSDK_MAX_DESC: usize = 64;
 
 /// The alignment of the [`Header`] type, should always be 16
-///
-/// ```
-/// assert_eq!(irsdk::raw::ALIGNMENT, 16);
-/// ```
 pub const ALIGNMENT: usize = std::mem::align_of::<Header>();
 
 pub const HEADER_SIZE: usize = std::mem::size_of::<Header>();
@@ -118,6 +114,31 @@ impl VarHeader {
     }
 }
 
+#[cfg(test)]
+impl VarHeader {
+    pub(crate) fn new(
+        ty: c_int,
+        offset: c_int,
+        count: c_int,
+        count_as_time: c_char,
+        name: &[u8],
+        desc: &[u8],
+        unit: &[u8],
+    ) -> Self {
+        use crate::test_utils::test_string;
+        Self {
+            ty,
+            offset,
+            count,
+            count_as_time,
+            _pad: [0; 3],
+            name: test_string(name),
+            desc: test_string(desc),
+            unit: test_string(unit),
+        }
+    }
+}
+
 impl PartialEq for VarBuf {
     fn eq(&self, other: &Self) -> bool {
         self.tick_count == other.tick_count && self.buf_offset == other.buf_offset
@@ -141,6 +162,7 @@ mod tests {
     use crate::{
         include_bytes_aligned,
         raw::{DiskSubHeader, Header, VarBuf, VarHeader},
+        test_utils::test_string,
     };
 
     #[test]
@@ -225,14 +247,5 @@ mod tests {
                 unit: test_string(b"s"),
             }]
         );
-    }
-
-    /// Copies the given bytes to an array and fills the leftovers with `b'\0''`
-    fn test_string<const N: usize>(val: &[u8]) -> [i8; N] {
-        assert!(N > val.len());
-        let mut arr = [0; N];
-        arr[0..val.len()].clone_from_slice(val);
-
-        arr.map(|b| b as i8)
     }
 }

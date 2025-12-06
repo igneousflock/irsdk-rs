@@ -1,6 +1,7 @@
 use std::ffi::{CStr, c_char};
 
 use indexmap::IndexMap;
+use num_enum::TryFromPrimitive;
 
 use crate::raw;
 
@@ -23,7 +24,8 @@ impl VarSet {
     }
 }
 
-#[derive(Clone, Copy, Debug, serde::Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, TryFromPrimitive, serde::Serialize)]
+#[repr(i32)]
 pub enum VarType {
     Char,
     Bool,
@@ -43,7 +45,7 @@ impl VarType {
     }
 }
 
-#[derive(Clone, Debug, serde::Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
 pub struct VarHeader {
     pub ty: VarType,
     pub offset: usize,
@@ -57,15 +59,10 @@ pub struct VarHeader {
 
 impl VarHeader {
     pub fn from_raw(raw: &raw::VarHeader) -> Self {
-        let ty = match raw.ty {
-            0 => VarType::Char,
-            1 => VarType::Bool,
-            2 => VarType::Int,
-            3 => VarType::Bitfield,
-            4 => VarType::Float,
-            5 => VarType::Double,
-            _ => panic!("invalid var type: `{}`", raw.ty),
-        };
+        let ty = raw
+            .ty
+            .try_into()
+            .unwrap_or_else(|_| panic!("invalid var type: `{}`", raw.ty));
 
         Self {
             ty,
@@ -84,4 +81,49 @@ fn string_from_c_chars(buf: &[c_char]) -> String {
     assert!(buf.contains(&0));
     let cstr = unsafe { CStr::from_ptr(buf.as_ptr()) };
     cstr.to_string_lossy().into_owned()
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        raw,
+        telemetry::{VarHeader, VarType},
+    };
+
+    #[test]
+    fn decodes_var_header() {
+        let raw = raw::VarHeader::new(
+            5,
+            0,
+            1,
+            0,
+            b"SessionTime",
+            b"Seconds since session start",
+            b"s",
+        );
+        let var_header = VarHeader::from_raw(&raw);
+
+        assert_eq!(
+            var_header,
+            VarHeader {
+                ty: VarType::Double,
+                offset: 0,
+                count: 1,
+                count_as_time: true,
+                name: "SessionTime".to_string(),
+                description: "Seconds since session start".to_string(),
+                unit: "s".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    #[should_panic = "invalid var type: `99`"]
+    fn panics_with_invalid_var_type() {
+        let raw = raw::VarHeader::new(
+            99, // invalid
+            0, 1, 0, b"", b"", b"",
+        );
+        VarHeader::from_raw(&raw);
+    }
 }
