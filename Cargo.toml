@@ -12,6 +12,9 @@ num_enum = "0.7.5"
 saphyr = "0.0.6"
 serde = { version = "1.0.228", features = ["derive"] }
 
+[dev-dependencies]
+csv = "1.4.0"
+
 [lints.clippy]
 cloned_instead_of_copied = "warn"
 copy_iterator = "warn"
@@ -45,7 +48,3 @@ unnested_or_patterns = "warn"
 unused_self = "warn"
 used_underscore_binding = "warn"
 unwrap_used = "warn"
-
-[dev-dependencies]
-csv = "1.4.0"
-
