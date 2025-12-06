@@ -53,8 +53,8 @@ impl IbtFile {
     }
 
     pub fn raw_session_data(&self) -> String {
-        let offset = self.header.session_info_offset();
-        let len = self.header.session_info_len();
+        let offset = self.header.session_info_offset;
+        let len = self.header.session_info_len;
         let session_string = &self.data[offset..offset + len];
         String::from_utf8_lossy(session_string).into_owned()
     }

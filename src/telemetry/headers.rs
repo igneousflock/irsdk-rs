@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 
 use crate::raw;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Header {
     pub tick_rate: u32,
 
@@ -20,7 +20,7 @@ pub struct Header {
     pub buf_len: usize,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DiskSubHeader {
     /// Timestamp for the start of the session
     pub date: DateTime<Utc>,
@@ -37,7 +37,7 @@ pub struct DiskSubHeader {
     pub record_count: usize,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct VarBufInfo {
     pub tick_count: usize,
     pub buf_offset: usize,
@@ -72,14 +72,6 @@ impl Header {
                 .expect("`buf_len` should be positive"),
         }
     }
-
-    pub fn session_info_len(&self) -> usize {
-        self.session_info_len
-    }
-
-    pub fn session_info_offset(&self) -> usize {
-        self.session_info_offset
-    }
 }
 
 impl DiskSubHeader {
@@ -113,5 +105,85 @@ impl VarBufInfo {
                 .try_into()
                 .expect("`buf_offset` to be positive"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use chrono::{DateTime, Utc};
+
+    use crate::{
+        raw,
+        telemetry::{DiskSubHeader, Header, VarBufInfo},
+    };
+
+    #[test]
+    fn decodes_header() {
+        let raw = raw::Header {
+            ver: 2,
+            status: 1,
+            tick_rate: 60,
+            session_info_update: 0,
+            session_info_len: 15654,
+            session_info_offset: 40320,
+            num_vars: 279,
+            var_header_offset: 144,
+            num_buf: 1,
+            buf_len: 1081,
+            var_bufs: [raw::VarBuf::new(0, 0); 4],
+        };
+        let header = Header::from_raw(&raw);
+
+        assert_eq!(
+            header,
+            Header {
+                tick_rate: 60,
+                session_info_update: 0,
+                session_info_len: 15654,
+                session_info_offset: 40320,
+                num_vars: 279,
+                buf_len: 1081,
+            }
+        );
+    }
+
+    #[test]
+    fn descodes_var_buf_info() {
+        let raw = raw::VarBuf::new(1234, 5678);
+        let info = VarBufInfo::from_raw(&raw);
+
+        assert_eq!(
+            info,
+            VarBufInfo {
+                tick_count: 1234,
+                buf_offset: 5678,
+            }
+        );
+    }
+
+    #[test]
+    fn decodes_disk_sub_header() {
+        let now = Utc::now();
+        let raw = raw::DiskSubHeader {
+            session_start_date: now.timestamp(),
+            session_start_time: 100.0,
+            session_end_time: 200.0,
+            session_lap_count: 3,
+            session_record_count: 9759,
+        };
+        let sub_header = DiskSubHeader::from_raw(&raw);
+
+        assert_eq!(
+            sub_header,
+            DiskSubHeader {
+                date: DateTime::from_timestamp_secs(now.timestamp()).unwrap(),
+                start_time: Duration::from_secs(100),
+                end_time: Duration::from_secs(200),
+                lap_count: 3,
+                record_count: 9759
+            }
+        );
     }
 }

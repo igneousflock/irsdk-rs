@@ -58,7 +58,7 @@ pub struct VarBuf {
     pub tick_count: c_int,
     /// Offset from the header
     pub buf_offset: c_int,
-    _pad: [c_int; 2],
+    pub(crate) _pad: [c_int; 2],
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, AnyBitPattern)]
@@ -98,6 +98,17 @@ impl Header {
 impl DiskSubHeader {
     pub fn from_raw_bytes(bytes: &[u8]) -> Self {
         *bytemuck::from_bytes(bytes)
+    }
+}
+
+#[cfg(test)]
+impl VarBuf {
+    pub(crate) fn new(tick_count: c_int, buf_offset: c_int) -> Self {
+        Self {
+            tick_count,
+            buf_offset,
+            _pad: [0; 2],
+        }
     }
 }
 
