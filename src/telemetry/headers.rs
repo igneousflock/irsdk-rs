@@ -5,8 +5,8 @@ use chrono::{DateTime, Utc};
 use crate::raw;
 
 #[derive(Clone, Copy, Debug, thiserror::Error)]
-#[error("field at struct offset `{offset}` could not be cast")]
-pub struct CastError {
+#[error("field at struct offset `{offset}` could not be converted from the raw type")]
+pub struct RawConversionError {
     offset: usize,
 }
 
@@ -53,15 +53,15 @@ pub struct VarBufInfo {
 /// the field if the conversion fails. Relies on type inference to determine output type.
 macro_rules! cast_field {
     ($raw:ident, $field:ident, $raw_container:ty) => {{
-        use crate::telemetry::CastError;
-        $raw.$field.try_into().map_err(|_| CastError {
+        use crate::telemetry::RawConversionError;
+        $raw.$field.try_into().map_err(|_| RawConversionError {
             offset: std::mem::offset_of!($raw_container, $field),
         })
     }};
 }
 
 impl Header {
-    pub fn from_raw(raw: &raw::Header) -> Result<Self, CastError> {
+    pub fn from_raw(raw: &raw::Header) -> Result<Self, RawConversionError> {
         Ok(Self {
             tick_rate: cast_field!(raw, tick_rate, raw::Header)?,
             session_info_update: cast_field!(raw, session_info_update, raw::Header)?,
@@ -74,10 +74,11 @@ impl Header {
 }
 
 impl DiskSubHeader {
-    pub fn from_raw(raw: &raw::DiskSubHeader) -> Result<Self, CastError> {
+    pub fn from_raw(raw: &raw::DiskSubHeader) -> Result<Self, RawConversionError> {
         Ok(Self {
-            date: DateTime::from_timestamp_secs(raw.start_date)
-                .expect("`session_start_date` should be a valid timestamp"),
+            date: DateTime::from_timestamp_secs(raw.start_date).ok_or(RawConversionError {
+                offset: std::mem::offset_of!(raw::DiskSubHeader, start_date),
+            })?,
             start_time: Duration::from_secs_f64(raw.start_time),
             end_time: Duration::from_secs_f64(raw.end_time),
             lap_count: cast_field!(raw, lap_count, raw::DiskSubHeader)?,
@@ -87,7 +88,7 @@ impl DiskSubHeader {
 }
 
 impl VarBufInfo {
-    pub fn from_raw(raw: &raw::VarBuf) -> Result<Self, CastError> {
+    pub fn from_raw(raw: &raw::VarBuf) -> Result<Self, RawConversionError> {
         Ok(Self {
             tick_count: cast_field!(raw, tick_count, raw::VarBuf)?,
             buf_offset: cast_field!(raw, buf_offset, raw::VarBuf)?,

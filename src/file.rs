@@ -5,13 +5,13 @@ use saphyr::LoadableYamlNode;
 
 use crate::{
     raw,
-    telemetry::{CastError, DiskSubHeader, Header, Sample, VarBufInfo, VarHeader, VarSet},
+    telemetry::{DiskSubHeader, Header, RawConversionError, Sample, VarBufInfo, VarHeader, VarSet},
 };
 
 #[derive(Debug, thiserror::Error)]
 pub enum IbtFileError {
     #[error(transparent)]
-    CastError(#[from] CastError),
+    CastError(#[from] RawConversionError),
 
     #[error(transparent)]
     Io(#[from] std::io::Error),
