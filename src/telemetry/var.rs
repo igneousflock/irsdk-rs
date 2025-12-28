@@ -1,4 +1,4 @@
-use std::ffi::{CStr, c_char};
+use std::ffi::c_char;
 
 use indexmap::IndexMap;
 use num_enum::TryFromPrimitive;
@@ -76,11 +76,13 @@ impl VarHeader {
     }
 }
 
-// TODO: There may be some weird encoding on these strings
 fn string_from_c_chars(buf: &[c_char]) -> String {
     assert!(buf.contains(&0));
-    let cstr = unsafe { CStr::from_ptr(buf.as_ptr()) };
-    cstr.to_string_lossy().into_owned()
+    // Strings in iRacing are all ISO-8859-1, which is effectively a subset of UTF-8. Therefore, it
+    // is safe to interpret a string buffer as unsiged bytes and cast them to UTF-8 codepoints.
+    //
+    // https://forums.iracing.com/discussion/comment/703469/#Comment_703469
+    buf.iter().map(|c| *c as u8 as char).collect()
 }
 
 #[cfg(test)]
