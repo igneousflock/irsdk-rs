@@ -32,7 +32,7 @@ impl<'data> Sample<'data> {
                 VarType::Bool => Value::Bool(slice[0] != 0),
                 VarType::Int => Value::Int(align_cast(slice)),
                 VarType::Bitfield => {
-                    let b = Bitfield::parse(align_cast(slice), var.unit.as_str());
+                    let b = Bitfield::parse_unit(align_cast(slice), var.unit.as_str());
                     Value::Bitfield(b)
                 }
                 VarType::Float => Value::Float(align_cast(slice)),
