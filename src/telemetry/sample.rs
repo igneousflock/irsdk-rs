@@ -53,6 +53,6 @@ pub enum Value {
 
     Enum(Enum),
 
-    IntArray(Vec<u32>),
+    IntArray(Vec<i32>),
     FloatArray(Vec<f32>),
 }
