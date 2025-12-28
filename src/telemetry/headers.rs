@@ -4,6 +4,12 @@ use chrono::{DateTime, Utc};
 
 use crate::raw;
 
+#[derive(Clone, Copy, Debug, thiserror::Error)]
+#[error("field at struct offset `{offset}` could not be cast")]
+pub struct CastError {
+    offset: usize,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Header {
     pub tick_rate: u32,
@@ -43,68 +49,49 @@ pub struct VarBufInfo {
     pub buf_offset: usize,
 }
 
+/// Calls `try_into` on `<raw as raw_container>.field`, returning an error with the byte offset of
+/// the field if the conversion fails. Relies on type inference to determine output type.
+macro_rules! cast_field {
+    ($raw:ident, $field:ident, $raw_container:ty) => {{
+        use crate::telemetry::CastError;
+        $raw.$field.try_into().map_err(|_| CastError {
+            offset: std::mem::offset_of!($raw_container, $field),
+        })
+    }};
+}
+
 impl Header {
-    pub fn from_raw(raw: &raw::Header) -> Self {
-        Self {
-            tick_rate: raw
-                .tick_rate
-                .try_into()
-                .expect("`tick_rate` should be positive"),
-            session_info_update: raw
-                .session_info_update
-                .try_into()
-                .expect("`session_info_update` should be positive"),
-            session_info_len: raw
-                .session_info_len
-                .try_into()
-                .expect("`session_info_len` should be positive"),
-            session_info_offset: raw
-                .session_info_offset
-                .try_into()
-                .expect("`session_info_offset` should be positive"),
-            num_vars: raw
-                .num_vars
-                .try_into()
-                .expect("`num_vars` should be positive"),
-            buf_len: raw
-                .buf_len
-                .try_into()
-                .expect("`buf_len` should be positive"),
-        }
+    pub fn from_raw(raw: &raw::Header) -> Result<Self, CastError> {
+        Ok(Self {
+            tick_rate: cast_field!(raw, tick_rate, raw::Header)?,
+            session_info_update: cast_field!(raw, session_info_update, raw::Header)?,
+            session_info_len: cast_field!(raw, session_info_len, raw::Header)?,
+            session_info_offset: cast_field!(raw, session_info_offset, raw::Header)?,
+            num_vars: cast_field!(raw, num_vars, raw::Header)?,
+            buf_len: cast_field!(raw, buf_len, raw::Header)?,
+        })
     }
 }
 
 impl DiskSubHeader {
-    pub fn from_raw(raw: &raw::DiskSubHeader) -> Self {
-        Self {
-            date: DateTime::from_timestamp_secs(raw.session_start_date)
+    pub fn from_raw(raw: &raw::DiskSubHeader) -> Result<Self, CastError> {
+        Ok(Self {
+            date: DateTime::from_timestamp_secs(raw.start_date)
                 .expect("`session_start_date` should be a valid timestamp"),
-            start_time: Duration::from_secs_f64(raw.session_start_time),
-            end_time: Duration::from_secs_f64(raw.session_end_time),
-            lap_count: raw
-                .session_lap_count
-                .try_into()
-                .expect("`session_lap_count` should be positive"),
-            record_count: raw
-                .session_record_count
-                .try_into()
-                .expect("`session_record_count` should be positive"),
-        }
+            start_time: Duration::from_secs_f64(raw.start_time),
+            end_time: Duration::from_secs_f64(raw.end_time),
+            lap_count: cast_field!(raw, lap_count, raw::DiskSubHeader)?,
+            record_count: cast_field!(raw, record_count, raw::DiskSubHeader)?,
+        })
     }
 }
 
 impl VarBufInfo {
-    pub fn from_raw(raw: &raw::VarBuf) -> Self {
-        Self {
-            tick_count: raw
-                .tick_count
-                .try_into()
-                .expect("`tick_count` to be positive"),
-            buf_offset: raw
-                .buf_offset
-                .try_into()
-                .expect("`buf_offset` to be positive"),
-        }
+    pub fn from_raw(raw: &raw::VarBuf) -> Result<Self, CastError> {
+        Ok(Self {
+            tick_count: cast_field!(raw, tick_count, raw::VarBuf)?,
+            buf_offset: cast_field!(raw, buf_offset, raw::VarBuf)?,
+        })
     }
 }
 
@@ -113,6 +100,7 @@ mod tests {
     use std::time::Duration;
 
     use chrono::{DateTime, Utc};
+    use claims::assert_ok_eq;
 
     use crate::{
         raw,
@@ -136,7 +124,7 @@ mod tests {
         };
         let header = Header::from_raw(&raw);
 
-        assert_eq!(
+        assert_ok_eq!(
             header,
             Header {
                 tick_rate: 60,
@@ -154,7 +142,7 @@ mod tests {
         let raw = raw::VarBuf::new(1234, 5678);
         let info = VarBufInfo::from_raw(&raw);
 
-        assert_eq!(
+        assert_ok_eq!(
             info,
             VarBufInfo {
                 tick_count: 1234,
@@ -167,15 +155,15 @@ mod tests {
     fn decodes_disk_sub_header() {
         let now = Utc::now();
         let raw = raw::DiskSubHeader {
-            session_start_date: now.timestamp(),
-            session_start_time: 100.0,
-            session_end_time: 200.0,
-            session_lap_count: 3,
-            session_record_count: 9759,
+            start_date: now.timestamp(),
+            start_time: 100.0,
+            end_time: 200.0,
+            lap_count: 3,
+            record_count: 9759,
         };
         let sub_header = DiskSubHeader::from_raw(&raw);
 
-        assert_eq!(
+        assert_ok_eq!(
             sub_header,
             DiskSubHeader {
                 date: DateTime::from_timestamp_secs(now.timestamp()).unwrap(),

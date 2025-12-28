@@ -5,8 +5,20 @@ use saphyr::LoadableYamlNode;
 
 use crate::{
     raw,
-    telemetry::{DiskSubHeader, Header, Sample, VarBufInfo, VarHeader, VarSet},
+    telemetry::{CastError, DiskSubHeader, Header, Sample, VarBufInfo, VarHeader, VarSet},
 };
+
+#[derive(Debug, thiserror::Error)]
+pub enum IbtFileError {
+    #[error(transparent)]
+    CastError(#[from] CastError),
+
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+
+    #[error(transparent)]
+    RawTelem(#[from] raw::RawTelemError),
+}
 
 #[derive(Clone, Debug)]
 pub struct IbtFile {
@@ -21,16 +33,16 @@ pub struct IbtFile {
 }
 
 impl IbtFile {
-    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, std::io::Error> {
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, IbtFileError> {
         let data = AVec::from_slice(raw::ALIGNMENT, &std::fs::read(&path)?);
 
-        let raw_header = raw::Header::from_raw_bytes(&data[..raw::HEADER_SIZE]);
-        let header = Header::from_raw(&raw_header);
+        let raw_header = raw::Header::from_raw_bytes(&data[..raw::HEADER_SIZE])?;
+        let header = Header::from_raw(&raw_header)?;
 
         let raw_sub_header = raw::DiskSubHeader::from_raw_bytes(
             &data[raw::HEADER_SIZE..raw::HEADER_SIZE + raw::SUB_HEADER_SIZE],
         );
-        let sub_header = DiskSubHeader::from_raw(&raw_sub_header);
+        let sub_header = DiskSubHeader::from_raw(&raw_sub_header)?;
 
         let var_headers_offset = raw_header.var_header_offset as usize;
         let var_headers_len = raw::VAR_HEADER_SIZE * raw_header.num_vars as usize;
@@ -41,7 +53,7 @@ impl IbtFile {
             .collect();
         let vars = VarSet::new(var_headers);
 
-        let var_buf_info = VarBufInfo::from_raw(&raw_header.var_bufs[0]);
+        let var_buf_info = VarBufInfo::from_raw(&raw_header.var_bufs[0])?;
 
         Ok(Self {
             data,

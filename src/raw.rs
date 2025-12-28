@@ -16,10 +16,15 @@ pub const HEADER_SIZE: usize = std::mem::size_of::<Header>();
 pub const SUB_HEADER_SIZE: usize = std::mem::size_of::<DiskSubHeader>();
 pub const VAR_HEADER_SIZE: usize = std::mem::size_of::<VarHeader>();
 
+#[derive(Clone, Copy, Debug, thiserror::Error)]
+pub enum RawTelemError {
+    #[error("API version (first four bytes) should always be `2`, got `{0}`")]
+    InvalidApiVersion(c_int),
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, AnyBitPattern)]
 #[repr(C, align(16))]
 pub struct Header {
-    // TODO: add assertions on this field
     /// API header version, should always be 2
     pub ver: c_int,
     /// Connected status, should always be 1
@@ -61,15 +66,15 @@ pub struct VarBuf {
 #[repr(C, align(16))]
 pub struct DiskSubHeader {
     /// Timestamp for the start of the session, seconds since epoch
-    pub session_start_date: time_t,
+    pub start_date: time_t,
     /// How long into the session the run started, in seconds
-    pub session_start_time: c_double,
+    pub start_time: c_double,
     /// How long into the session the run ended, in seconds
-    pub session_end_time: c_double,
+    pub end_time: c_double,
     /// Number of laps run in the session
-    pub session_lap_count: c_int,
+    pub lap_count: c_int,
     /// Number of records in the file
-    pub session_record_count: c_int,
+    pub record_count: c_int,
 }
 
 #[derive(Clone, Copy, Debug, Eq, AnyBitPattern)]
@@ -86,8 +91,13 @@ pub struct VarHeader {
 }
 
 impl Header {
-    pub fn from_raw_bytes(bytes: &[u8]) -> Self {
-        *bytemuck::from_bytes(bytes)
+    pub fn from_raw_bytes(bytes: &[u8]) -> Result<Self, RawTelemError> {
+        let header = *bytemuck::from_bytes::<Self>(bytes);
+        if header.ver != 2 {
+            return Err(RawTelemError::InvalidApiVersion(header.ver));
+        }
+
+        Ok(header)
     }
 }
 
@@ -159,6 +169,8 @@ impl PartialEq for VarHeader {
 
 #[cfg(test)]
 mod tests {
+    use claims::assert_ok_eq;
+
     use crate::{
         include_bytes_aligned,
         raw::{DiskSubHeader, Header, VarBuf, VarHeader},
@@ -171,7 +183,7 @@ mod tests {
         let raw = include_bytes_aligned!("../test-data/raw_header");
         let header = Header::from_raw_bytes(&raw);
 
-        assert_eq!(
+        assert_ok_eq!(
             header,
             Header {
                 ver: 2,
@@ -219,11 +231,11 @@ mod tests {
         assert_eq!(
             disk_sub_header,
             DiskSubHeader {
-                session_start_date: 1764642265,
-                session_start_time: 52.116666030881774,
-                session_end_time: 219.34999949144233,
-                session_lap_count: 3,
-                session_record_count: 9759,
+                start_date: 1764642265,
+                start_time: 52.116666030881774,
+                end_time: 219.34999949144233,
+                lap_count: 3,
+                record_count: 9759,
             }
         );
     }
