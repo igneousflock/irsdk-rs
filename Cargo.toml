@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 aligned-vec = "0.6.4"
+bit-iter = "1.3.1"
 bytemuck = { version = "1.24.0", features = ["derive", "extern_crate_alloc"] }
 chrono = "0.4.42"
 indexmap = "2.12.1"

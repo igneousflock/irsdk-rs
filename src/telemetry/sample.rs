@@ -2,7 +2,7 @@ use bytemuck::pod_collect_to_vec;
 
 use crate::{
     aligned::align_cast,
-    telemetry::{Enum, VarHeader, VarType},
+    telemetry::{Bitfield, Enum, VarHeader, VarType},
 };
 
 pub struct Sample<'data>(&'data [u8]);
@@ -31,7 +31,10 @@ impl<'data> Sample<'data> {
                 VarType::Char => Value::Char(slice[0] as char),
                 VarType::Bool => Value::Bool(slice[0] != 0),
                 VarType::Int => Value::Int(align_cast(slice)),
-                VarType::Bitfield => Value::Bitfield(align_cast(slice)),
+                VarType::Bitfield => {
+                    let b = Bitfield::parse(align_cast(slice), var.unit.as_str());
+                    Value::Bitfield(b)
+                }
                 VarType::Float => Value::Float(align_cast(slice)),
                 VarType::Double => Value::Double(align_cast(slice)),
             }
@@ -44,7 +47,7 @@ pub enum Value {
     Char(char),
     Bool(bool),
     Int(i32),
-    Bitfield(u32),
+    Bitfield(Bitfield),
     Float(f32),
     Double(f64),
 

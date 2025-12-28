@@ -1,8 +1,10 @@
+mod bitfields;
 mod enums;
 mod headers;
 mod sample;
 mod var;
 
+pub use bitfields::{Bitfield, EngineWarnings};
 pub use enums::{
     CarLeftRight, Enum, PaceMode, PitServiceStatus, SessionState, TrackLocation, TrackSurface,
     TrackWetness,
