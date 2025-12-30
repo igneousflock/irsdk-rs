@@ -82,7 +82,10 @@ fn string_from_c_chars(buf: &[c_char]) -> String {
     // is safe to interpret a string buffer as unsiged bytes and cast them to UTF-8 codepoints.
     //
     // https://forums.iracing.com/discussion/comment/703469/#Comment_703469
-    buf.iter().map(|c| *c as u8 as char).collect()
+    buf.iter()
+        .map(|c| *c as u8 as char)
+        .take_while(|c| *c != '\0')
+        .collect()
 }
 
 #[cfg(test)]
