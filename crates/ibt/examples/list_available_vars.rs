@@ -1,5 +1,5 @@
 use csv::Writer;
-use irsdk::IbtFile;
+use ibt::IbtFile;
 
 fn main() {
     let file_name = std::env::args()

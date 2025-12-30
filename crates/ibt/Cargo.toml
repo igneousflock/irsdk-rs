@@ -1,0 +1,28 @@
+[package]
+name = "ibt"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+aligned-vec.workspace = true
+bit-iter.workspace = true
+bytemuck = { workspace = true, features = ["derive", "extern_crate_alloc"] }
+chrono.workspace = true
+indexmap.workspace = true
+num_enum.workspace = true
+saphyr.workspace = true
+serde = { workspace = true, features = ["derive"] }
+thiserror.workspace = true
+
+[dev-dependencies]
+claims = "0.8.0"
+csv = "1.4.0"
+

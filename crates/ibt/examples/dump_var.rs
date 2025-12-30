@@ -1,4 +1,4 @@
-use irsdk::IbtFile;
+use ibt::IbtFile;
 
 const USAGE: &str = "Usage: dump_var <PATH_TO_IBT> <VAR_NAME>";
 

@@ -1,4 +1,4 @@
-use irsdk::IbtFile;
+use ibt::IbtFile;
 use saphyr::YamlEmitter;
 
 fn main() {

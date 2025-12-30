@@ -1,4 +1,4 @@
-use irsdk::{
+use ibt::{
     IbtFile,
     telemetry::{Value, VarType},
 };
