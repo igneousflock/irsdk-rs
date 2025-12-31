@@ -18,8 +18,12 @@ pub const VAR_HEADER_SIZE: usize = std::mem::size_of::<VarHeader>();
 
 #[derive(Clone, Copy, Debug, thiserror::Error)]
 pub enum RawTelemError {
+    /// API version (first four bytes) should always be `2`
     #[error("API version (first four bytes) should always be `2`, got `{0}`")]
-    InvalidApiVersion(c_int),
+    InvalidApiVersion(
+        /// the detected API version
+        c_int,
+    ),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, AnyBitPattern)]

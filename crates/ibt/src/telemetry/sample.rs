@@ -2,16 +2,20 @@ use bytemuck::pod_collect_to_vec;
 
 use crate::{
     aligned::align_cast,
-    telemetry::{Bitfield, Enum, VarHeader, VarType},
+    telemetry::{VarHeader, VarType, bitfields::Bitfield, enums::Enum},
 };
 
+/// A set of telemetry values at a specific point in time
+///
+/// Obtained from an [`IbtFile`][crate::IbtFile] or live telemetry.
 pub struct Sample<'data>(&'data [u8]);
 
 impl<'data> Sample<'data> {
-    pub fn new(data: &'data [u8]) -> Self {
+    pub(crate) fn new(data: &'data [u8]) -> Self {
         Self(data)
     }
 
+    /// Extract a value from the sample
     pub fn read_var(&self, var: &VarHeader) -> Value {
         let size = var.ty.size() * var.count;
         let slice = &self.0[var.offset..var.offset + size];
@@ -42,6 +46,7 @@ impl<'data> Sample<'data> {
     }
 }
 
+/// The value of a variable in a [`Sample`]
 #[derive(Clone, Debug)]
 pub enum Value {
     Char(char),

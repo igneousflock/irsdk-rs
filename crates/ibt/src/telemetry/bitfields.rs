@@ -1,3 +1,9 @@
+//! Bitfield types
+
+/// Multiple related telemetry flags compressed into one value
+///
+/// Internally, these values are 32 bit integers, where each binary bit may represent the state of
+/// a certain flag. See each variant's internal type for the possible values.
 #[derive(Clone, Copy, Debug)]
 pub enum Bitfield {
     EngineWarnings(EngineWarnings),
@@ -5,6 +11,8 @@ pub enum Bitfield {
     CameraState(CameraState),
     PitServiceFlags(PitServiceFlags),
     PaceFlags(PaceFlags),
+    /// The variable's type was `Bitfield` but this crate didn't know how to decode it. Please file
+    /// a bug report.
     Unknown(u32),
 }
 

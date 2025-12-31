@@ -1,7 +1,12 @@
+//! Enum types
+
 use num_enum::FromPrimitive;
 
 use crate::aligned::align_cast;
 
+/// A value representing one of several states
+///
+/// These are 32 bit integers under the hood, but translated to their actual meaning.
 #[derive(Clone, Copy, Debug)]
 pub enum Enum {
     TrackLocation(TrackLocation),

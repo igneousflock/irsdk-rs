@@ -4,12 +4,15 @@ use chrono::{DateTime, Utc};
 
 use crate::raw;
 
+/// A value read from telemetry could not be cast or converted to its expected type
 #[derive(Clone, Copy, Debug, thiserror::Error)]
 #[error("field at struct offset `{offset}` could not be converted from the raw type")]
 pub struct RawConversionError {
     offset: usize,
 }
 
+/// General session info as well as byte offsets for variable buffers and the session
+/// string.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Header {
     pub tick_rate: u32,
@@ -22,10 +25,12 @@ pub struct Header {
     /// Session info, encoded in YAML
     pub session_info_offset: usize,
 
+    /// Number of variables available in each sample
     pub num_vars: usize,
     pub buf_len: usize,
 }
 
+/// Session information specific to IBT files
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DiskSubHeader {
     /// Timestamp for the start of the session
@@ -43,9 +48,13 @@ pub struct DiskSubHeader {
     pub record_count: usize,
 }
 
+/// The status of a buffer of values
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct VarBufInfo {
+    /// In live telemetry, the tick this buffer's values represent. In a file, the number of ticks
+    /// present in the data.
     pub tick_count: usize,
+    /// Offset of the start of this buffer from the start of the file/memmap
     pub buf_offset: usize,
 }
 

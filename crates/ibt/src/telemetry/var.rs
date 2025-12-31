@@ -5,20 +5,24 @@ use num_enum::TryFromPrimitive;
 
 use crate::raw;
 
+/// Map of variable names to their headers
 #[derive(Clone, Debug)]
 pub struct VarSet(IndexMap<String, VarHeader>);
 
 impl VarSet {
     pub fn new(mut vars: Vec<VarHeader>) -> Self {
+        // use an `IndexMap` for in-order iteration over all values in a sample
         vars.sort_by_key(|v| v.offset);
         let map = vars.into_iter().map(|v| (v.name.clone(), v)).collect();
         Self(map)
     }
 
+    /// Get a var's header by name
     pub fn var(&self, name: &str) -> Option<&VarHeader> {
         self.0.get(name)
     }
 
+    /// Get an iterator over all vars in the set
     pub fn all_vars(&self) -> impl Iterator<Item = &VarHeader> {
         self.0.values()
     }
@@ -27,15 +31,22 @@ impl VarSet {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, TryFromPrimitive, serde::Serialize)]
 #[repr(i32)]
 pub enum VarType {
+    /// 1-byte character
     Char,
+    /// 1-byte boolean
     Bool,
+    /// 4-byte signed integer, see also [`Enum`][crate::telemetry::enums::Enum]
     Int,
+    /// Bitfield, see [`Bitfield`][crate::telemetry::bitfields::Bitfield]
     Bitfield,
+    /// 4-byte floating point
     Float,
+    /// 8-byte floating point
     Double,
 }
 
 impl VarType {
+    /// Size in bytes for any single value of this type
     pub fn size(&self) -> usize {
         match self {
             VarType::Char | VarType::Bool => 1,
@@ -45,20 +56,35 @@ impl VarType {
     }
 }
 
+/// Describes one of the variables available in a telemetry sample
+///
+/// Obtained from a `VarSet` constructed from a telemetry file or live telemetry.
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
 pub struct VarHeader {
+    /// The type of the variable
     pub ty: VarType,
-    pub offset: usize,
-    pub count: usize,
-    pub count_as_time: bool,
+    /// Offset of the variable in a sample
+    pub(crate) offset: usize,
+    /// Number of values of this variable in each sample
+    ///
+    /// Always 1 for non-array types
+    pub(crate) count: usize,
 
+    count_as_time: bool,
+
+    /// Name of the variable
     pub name: String,
     pub description: String,
+    /// The unit with which the variables value(s) should be interpreted
+    ///
+    /// This may be a unit of measurement (e.g., "m/s") or describe one of the [`Bitfield`][crate::telemetry::bitfields::Bitfield] or
+    /// [`Enum`][crate::telemetry::enums::Enum] types. A [`Sample`][crate::telemetry::Sample] will
+    /// decode known types correctly.
     pub unit: String,
 }
 
 impl VarHeader {
-    pub fn from_raw(raw: &raw::VarHeader) -> Self {
+    pub(crate) fn from_raw(raw: &raw::VarHeader) -> Self {
         let ty = raw
             .ty
             .try_into()
