@@ -8,6 +8,12 @@ license.workspace = true
 keywords.workspace = true
 categories.workspace = true
 
+# autoexamples = false
+#
+# [[target.'cfg(windows)'.examples]]
+# name = "stream_var"
+# path = "examples/stream_var.rs"
+
 [lints]
 workspace = true
 
@@ -16,6 +22,8 @@ ibt = { version = "0.1.0", path = "../ibt" }
 
 itertools.workspace = true
 thiserror.workspace = true
+
+[target.'cfg(windows)'.dependencies]
 windows = { workspace = true, features = ["Win32_System_Memory", "Win32_System_Threading"] }
 
 [dev-dependencies]
