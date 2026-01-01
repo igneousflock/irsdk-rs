@@ -26,6 +26,7 @@ impl<'data> Sample<'data> {
 
         if var.count > 1 {
             match var.ty {
+                VarType::Bool => Value::BoolArray(slice.iter().map(|b| *b != 0).collect()),
                 VarType::Int => Value::IntArray(pod_collect_to_vec(slice)),
                 VarType::Float => Value::FloatArray(pod_collect_to_vec(slice)),
                 _ => panic!("unsupported array type"),
@@ -58,6 +59,7 @@ pub enum Value {
 
     Enum(Enum),
 
+    BoolArray(Vec<bool>),
     IntArray(Vec<i32>),
     FloatArray(Vec<f32>),
 }
