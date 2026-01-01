@@ -13,17 +13,31 @@ use windows::core::{PCWSTR, w};
 const MEM_MAP_FILE_NAME: PCWSTR = w!(r"Local\IRSDKMemMapFileName");
 const DATA_VALID_EVENT_NAME: PCWSTR = w!(r"Local\IRSDKDataValidEvent");
 const TIMEOUT_MS: u32 = 1000;
+const FILE_NOT_FOUND_CODE: i32 = 0x80070002u32 as i32;
 
 #[derive(Clone, Debug, thiserror::Error)]
 pub enum IRacingClientError {
-    #[error(transparent)]
-    Windows(#[from] windows::core::Error),
+    #[error("Unknown windows error")]
+    Windows(#[source] windows::core::Error),
+
+    #[error("iRacing is not running")]
+    Disconnected(#[source] Option<windows::core::Error>),
 
     #[error(transparent)]
     RawTelemError(#[from] ibt::RawTelemError),
 
     #[error(transparent)]
     RawConversionError(#[from] ibt::telemetry::RawConversionError),
+}
+
+impl From<windows::core::Error> for IRacingClientError {
+    fn from(err: windows::core::Error) -> Self {
+        if err.code().0 == FILE_NOT_FOUND_CODE {
+            Self::Disconnected(Some(err))
+        } else {
+            Self::Windows(err)
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -84,6 +98,10 @@ impl IRacingClient {
         // read the header
         let ptr = self.mem_map_address.Value as *const raw::Header;
         let raw_header = unsafe { raw::Header::from_raw_ptr(ptr)? };
+
+        if raw_header.status != 1 {
+            return Err(IRacingClientError::Disconnected(None));
+        }
 
         Ok(raw_header)
     }
