@@ -31,7 +31,9 @@ pub struct IRacingClient {
     file_mapping_handle: HANDLE,
     mem_map_address: MEMORY_MAPPED_VIEW_ADDRESS,
     event_handle: HANDLE,
+
     vars: VarSet,
+    buf_len: usize,
 }
 
 impl IRacingClient {
@@ -47,9 +49,12 @@ impl IRacingClient {
             mem_map_address,
             event_handle,
             vars: VarSet::new(vec![]),
+            buf_len: 0,
         };
 
         let raw_header = client.next_raw_header()?;
+        let header = Header::from_raw(&raw_header)?;
+        client.buf_len = header.buf_len;
 
         // Read the var headers once
         let vh_offset = raw_header.var_header_offset as usize;
@@ -101,13 +106,37 @@ impl IRacingClient {
             .process_results(|a| a.max_by_key(|vb| vb.tick_count))?
             .expect("there are always four var bufs");
 
-        // TODO: figure out lifetimes here
         let sample_slice = unsafe { self.slice(newest_var_buf.buf_offset, header.buf_len) };
-        Ok(Sample::new(sample_slice))
+        Ok(Sample::new_as_owned(sample_slice))
+    }
+
+    pub fn next_sample_into_buf<'buf>(
+        &self,
+        buf: &'buf mut [u8],
+    ) -> Result<Sample<'buf>, IRacingClientError> {
+        let raw_header = self.next_raw_header()?;
+        let header = Header::from_raw(&raw_header)?;
+
+        let newest_var_buf = raw_header
+            .var_bufs
+            .iter()
+            .map(VarBufInfo::from_raw)
+            .process_results(|a| a.max_by_key(|vb| vb.tick_count))?
+            .expect("there are always four var bufs");
+
+        let sample_slice = unsafe { self.slice(newest_var_buf.buf_offset, header.buf_len) };
+
+        // copy the slice into the buffer
+        buf.clone_from_slice(sample_slice);
+        Ok(Sample::new(buf))
     }
 
     pub fn vars(&self) -> &VarSet {
         &self.vars
+    }
+
+    pub fn buf_len(&self) -> usize {
+        self.buf_len
     }
 }
 

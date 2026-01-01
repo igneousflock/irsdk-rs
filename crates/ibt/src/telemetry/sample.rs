@@ -1,4 +1,5 @@
 use bytemuck::pod_collect_to_vec;
+use std::borrow::Cow;
 
 use crate::{
     aligned::align_cast,
@@ -8,11 +9,16 @@ use crate::{
 /// A set of telemetry values at a specific point in time
 ///
 /// Obtained from an [`IbtFile`][crate::IbtFile] or live telemetry.
-pub struct Sample<'data>(&'data [u8]);
+#[derive(Clone, Debug)]
+pub struct Sample<'data>(Cow<'data, [u8]>);
 
 impl<'data> Sample<'data> {
     pub fn new(data: &'data [u8]) -> Self {
-        Self(data)
+        Self(Cow::Borrowed(data))
+    }
+
+    pub fn new_as_owned(data: &'_ [u8]) -> Self {
+        Self(Cow::Owned(data.to_vec()))
     }
 
     /// Extract a value from the sample
