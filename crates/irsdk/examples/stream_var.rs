@@ -11,9 +11,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut buf = vec![0; client.buf_len()];
     let var = client.vars().var(&var_name).expect("unknown var");
 
-    while let Ok(sample) = client.next_sample_into_buf(&mut buf) {
-        println!("{:?}", sample.read_var(var));
-        std::thread::sleep(Duration::from_millis(50));
+    loop {
+        match client.next_sample_into_buf(&mut buf) {
+            Ok(sample) => {
+                println!("{:?}", sample.read_var(var));
+                std::thread::sleep(Duration::from_millis(50));
+            }
+            Err(err) => {
+                println!("{err:#?}");
+                println!("{err}");
+                break;
+            }
+        }
     }
 
     Ok(())

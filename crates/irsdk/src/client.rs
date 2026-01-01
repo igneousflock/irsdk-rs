@@ -1,39 +1,34 @@
+use crate::win;
+use crate::win::{TelemetryMemMap, WindowsError};
 use ibt::raw;
 use ibt::telemetry::{Header, Sample, VarBufInfo, VarHeader, VarSet};
 use itertools::Itertools;
-use windows::Win32::Foundation::{CloseHandle, HANDLE};
-use windows::Win32::System::Memory::{
-    FILE_MAP_READ, MEMORY_MAPPED_VIEW_ADDRESS, MapViewOfFile, OpenFileMappingW, UnmapViewOfFile,
-};
-use windows::Win32::System::Threading::{
-    OpenEventW, SYNCHRONIZATION_SYNCHRONIZE, WaitForSingleObject,
-};
-use windows::core::{PCWSTR, w};
+use std::time::Duration;
 
-const MEM_MAP_FILE_NAME: PCWSTR = w!(r"Local\IRSDKMemMapFileName");
-const DATA_VALID_EVENT_NAME: PCWSTR = w!(r"Local\IRSDKDataValidEvent");
-const TIMEOUT_MS: u32 = 1000;
-const FILE_NOT_FOUND_CODE: i32 = 0x80070002u32 as i32;
+const TIMEOUT: Duration = Duration::from_millis(1000);
 
 #[derive(Clone, Debug, thiserror::Error)]
 pub enum IRacingClientError {
     #[error("Unknown windows error")]
-    Windows(#[source] windows::core::Error),
+    Windows(#[source] WindowsError),
 
     #[error("iRacing is not running")]
-    Disconnected(#[source] Option<windows::core::Error>),
+    Disconnected,
 
     #[error(transparent)]
     RawTelemError(#[from] ibt::RawTelemError),
 
     #[error(transparent)]
     RawConversionError(#[from] ibt::telemetry::RawConversionError),
+
+    #[error(transparent)]
+    SignalError(#[from] win::SignalError),
 }
 
-impl From<windows::core::Error> for IRacingClientError {
-    fn from(err: windows::core::Error) -> Self {
-        if err.code().0 == FILE_NOT_FOUND_CODE {
-            Self::Disconnected(Some(err))
+impl From<WindowsError> for IRacingClientError {
+    fn from(err: WindowsError) -> Self {
+        if err.is_file_not_found() {
+            Self::Disconnected
         } else {
             Self::Windows(err)
         }
@@ -42,9 +37,7 @@ impl From<windows::core::Error> for IRacingClientError {
 
 #[derive(Debug)]
 pub struct IRacingClient {
-    file_mapping_handle: HANDLE,
-    mem_map_address: MEMORY_MAPPED_VIEW_ADDRESS,
-    event_handle: HANDLE,
+    mem_map: TelemetryMemMap,
 
     vars: VarSet,
     buf_len: usize,
@@ -52,55 +45,38 @@ pub struct IRacingClient {
 
 impl IRacingClient {
     pub fn connect() -> Result<Self, IRacingClientError> {
-        let file_mapping_handle =
-            unsafe { OpenFileMappingW(FILE_MAP_READ.0, false, MEM_MAP_FILE_NAME)? };
-        let mem_map_address = unsafe { MapViewOfFile(file_mapping_handle, FILE_MAP_READ, 0, 0, 0) };
-        let event_handle =
-            unsafe { OpenEventW(SYNCHRONIZATION_SYNCHRONIZE, false, DATA_VALID_EVENT_NAME)? };
+        let mem_map = TelemetryMemMap::connect()?;
+        mem_map.wait_for_event_signal(TIMEOUT)?;
 
-        let mut client = Self {
-            file_mapping_handle,
-            mem_map_address,
-            event_handle,
-            vars: VarSet::new(vec![]),
-            buf_len: 0,
-        };
-
-        let raw_header = client.next_raw_header()?;
+        let raw_header = unsafe { mem_map.as_raw_header()? };
         let header = Header::from_raw(&raw_header)?;
-        client.buf_len = header.buf_len;
 
         // Read the var headers once
         let vh_offset = raw_header.var_header_offset as usize;
         let vh_len = raw::VAR_HEADER_SIZE * raw_header.num_vars as usize;
-        let vh_slice = unsafe { client.slice(vh_offset, vh_len) };
+        let vh_slice = unsafe { mem_map.as_slice(vh_offset, vh_len) };
 
         let var_headers = raw::VarHeader::slice_from_fraw_bytes(vh_slice)
             .iter()
             .map(VarHeader::from_raw)
             .collect();
-        client.vars = VarSet::new(var_headers);
 
-        Ok(client)
-    }
-
-    unsafe fn slice(&self, offset: usize, len: usize) -> &[u8] {
-        unsafe {
-            let ptr = (self.mem_map_address.Value as *const u8).add(offset);
-            std::slice::from_raw_parts(ptr, len)
-        }
+        Ok(Self {
+            mem_map,
+            vars: VarSet::new(var_headers),
+            buf_len: header.buf_len,
+        })
     }
 
     fn next_raw_header(&self) -> Result<raw::Header, IRacingClientError> {
         // wait for event signal
-        unsafe { WaitForSingleObject(self.event_handle, TIMEOUT_MS) };
+        self.mem_map.wait_for_event_signal(TIMEOUT)?;
 
         // read the header
-        let ptr = self.mem_map_address.Value as *const raw::Header;
-        let raw_header = unsafe { raw::Header::from_raw_ptr(ptr)? };
+        let raw_header = unsafe { self.mem_map.as_raw_header() }?;
 
         if raw_header.status != 1 {
-            return Err(IRacingClientError::Disconnected(None));
+            return Err(IRacingClientError::Disconnected);
         }
 
         Ok(raw_header)
@@ -115,7 +91,6 @@ impl IRacingClient {
 
     pub fn next_sample(&self) -> Result<Sample<'_>, IRacingClientError> {
         let raw_header = self.next_raw_header()?;
-        let header = Header::from_raw(&raw_header)?;
 
         let newest_var_buf = raw_header
             .var_bufs
@@ -124,7 +99,10 @@ impl IRacingClient {
             .process_results(|a| a.max_by_key(|vb| vb.tick_count))?
             .expect("there are always four var bufs");
 
-        let sample_slice = unsafe { self.slice(newest_var_buf.buf_offset, header.buf_len) };
+        let sample_slice = unsafe {
+            self.mem_map
+                .as_slice(newest_var_buf.buf_offset, self.buf_len)
+        };
         Ok(Sample::new_as_owned(sample_slice))
     }
 
@@ -133,7 +111,6 @@ impl IRacingClient {
         buf: &'buf mut [u8],
     ) -> Result<Sample<'buf>, IRacingClientError> {
         let raw_header = self.next_raw_header()?;
-        let header = Header::from_raw(&raw_header)?;
 
         let newest_var_buf = raw_header
             .var_bufs
@@ -142,7 +119,10 @@ impl IRacingClient {
             .process_results(|a| a.max_by_key(|vb| vb.tick_count))?
             .expect("there are always four var bufs");
 
-        let sample_slice = unsafe { self.slice(newest_var_buf.buf_offset, header.buf_len) };
+        let sample_slice = unsafe {
+            self.mem_map
+                .as_slice(newest_var_buf.buf_offset, self.buf_len)
+        };
 
         // copy the slice into the buffer
         buf.clone_from_slice(sample_slice);
@@ -155,16 +135,5 @@ impl IRacingClient {
 
     pub fn buf_len(&self) -> usize {
         self.buf_len
-    }
-}
-
-impl Drop for IRacingClient {
-    fn drop(&mut self) {
-        unsafe {
-            // TODO: verify safety. if one of these fails, can we still close the others?
-            let _ = CloseHandle(self.event_handle);
-            let _ = UnmapViewOfFile(self.mem_map_address);
-            let _ = CloseHandle(self.file_mapping_handle);
-        }
     }
 }
