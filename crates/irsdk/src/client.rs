@@ -46,14 +46,17 @@ pub struct IRacingClient {
 impl IRacingClient {
     pub fn connect() -> Result<Self, IRacingClientError> {
         let mem_map = TelemetryMemMap::connect()?;
-        mem_map.wait_for_event_signal(TIMEOUT)?;
 
+        mem_map.wait_for_event_signal(TIMEOUT)?;
+        // SAFETY: we've waited on the signal
         let raw_header = unsafe { mem_map.as_raw_header()? };
         let header = Header::from_raw(&raw_header)?;
 
         // Read the var headers once
         let vh_offset = raw_header.var_header_offset as usize;
         let vh_len = raw::VAR_HEADER_SIZE * raw_header.num_vars as usize;
+        // SAFETY: we've waited on the signal. offset and len come from the header.
+        // Data is copied immediately after.
         let vh_slice = unsafe { mem_map.as_slice(vh_offset, vh_len) };
 
         let var_headers = raw::VarHeader::slice_from_fraw_bytes(vh_slice)
@@ -69,10 +72,8 @@ impl IRacingClient {
     }
 
     fn next_raw_header(&self) -> Result<raw::Header, IRacingClientError> {
-        // wait for event signal
         self.mem_map.wait_for_event_signal(TIMEOUT)?;
-
-        // read the header
+        // SAFETY: we've waited on the signal
         let raw_header = unsafe { self.mem_map.as_raw_header() }?;
 
         if raw_header.status != 1 {
@@ -99,6 +100,10 @@ impl IRacingClient {
             .process_results(|a| a.max_by_key(|vb| vb.tick_count))?
             .expect("there are always four var bufs");
 
+        // SAFETY:
+        // - We waited on the signal in `self.next_raw_header()`
+        // - Offset and len come from the `VarBuf` in the header
+        // - We copy the data with `Sample::new_as_owned`
         let sample_slice = unsafe {
             self.mem_map
                 .as_slice(newest_var_buf.buf_offset, self.buf_len)
@@ -119,6 +124,10 @@ impl IRacingClient {
             .process_results(|a| a.max_by_key(|vb| vb.tick_count))?
             .expect("there are always four var bufs");
 
+        // SAFETY:
+        // - We waited on the signal in `self.next_raw_header()`
+        // - Offset and len come from the `VarBuf` in the header
+        // - We copy the data into the given buffer before returning
         let sample_slice = unsafe {
             self.mem_map
                 .as_slice(newest_var_buf.buf_offset, self.buf_len)

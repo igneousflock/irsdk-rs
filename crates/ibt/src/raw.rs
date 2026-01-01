@@ -104,8 +104,15 @@ impl Header {
         Ok(header)
     }
 
+    /// Dereference a raw pointer into a raw header
+    ///
+    /// # Safety
+    ///
+    /// The pointer must be non-null, aligned, and point to the start of a `Header`.
     pub unsafe fn from_raw_ptr(ptr: *const Self) -> Result<Self, RawTelemError> {
+        // SAFETY: the pointer points to a `Header`
         let header = unsafe { *ptr };
+        // sanity check, if this fails it could indicate undefined behavior, or simply that iRacing updated this API.
         if header.ver != 2 {
             return Err(RawTelemError::InvalidApiVersion(header.ver));
         }
