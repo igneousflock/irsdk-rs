@@ -14,10 +14,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
-    - name: Lint
-      run: cargo clippy --all-targets
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build -p ibt --verbose
+      - name: Run tests
+        run: cargo test -p ibt --verbose
+      - name: Lint
+        run: cargo clippy -p ibt --all-targets
