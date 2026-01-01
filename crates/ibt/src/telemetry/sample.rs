@@ -11,7 +11,7 @@ use crate::{
 pub struct Sample<'data>(&'data [u8]);
 
 impl<'data> Sample<'data> {
-    pub(crate) fn new(data: &'data [u8]) -> Self {
+    pub fn new(data: &'data [u8]) -> Self {
         Self(data)
     }
 

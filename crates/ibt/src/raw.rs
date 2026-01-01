@@ -103,6 +103,14 @@ impl Header {
 
         Ok(header)
     }
+
+    pub unsafe fn from_raw_ptr(ptr: *const Self) -> Result<Self, RawTelemError> {
+        let header = unsafe { *ptr };
+        if header.ver != 2 {
+            return Err(RawTelemError::InvalidApiVersion(header.ver));
+        }
+        Ok(header)
+    }
 }
 
 impl DiskSubHeader {

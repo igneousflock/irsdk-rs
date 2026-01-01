@@ -4,7 +4,7 @@
 
 mod aligned;
 mod file;
-mod raw;
+pub mod raw;
 pub mod telemetry;
 
 #[cfg(test)]

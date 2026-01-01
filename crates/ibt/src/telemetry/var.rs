@@ -84,7 +84,7 @@ pub struct VarHeader {
 }
 
 impl VarHeader {
-    pub(crate) fn from_raw(raw: &raw::VarHeader) -> Self {
+    pub fn from_raw(raw: &raw::VarHeader) -> Self {
         let ty = raw
             .ty
             .try_into()

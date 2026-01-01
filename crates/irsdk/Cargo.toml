@@ -1,0 +1,22 @@
+[package]
+name = "irsdk"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+license.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ibt = { version = "0.1.0", path = "../ibt" }
+
+itertools.workspace = true
+thiserror.workspace = true
+windows = { workspace = true, features = ["Win32_System_Memory", "Win32_System_Threading"] }
+
+[dev-dependencies]
+csv = "1.4.0"

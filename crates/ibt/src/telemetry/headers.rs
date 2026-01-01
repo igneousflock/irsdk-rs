@@ -44,7 +44,7 @@ pub struct DiskSubHeader {
     /// Number of laps run in the session
     pub lap_count: u32,
 
-    // Number of records in this file
+    /// Number of records in this file
     pub record_count: usize,
 }
 
