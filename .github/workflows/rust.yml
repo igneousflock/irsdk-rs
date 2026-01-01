@@ -16,8 +16,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build
-        run: cargo build -p ibt --verbose
+        run: cargo build --verbose
       - name: Run tests
-        run: cargo test -p ibt --verbose
+        run: cargo test --verbose
       - name: Lint
-        run: cargo clippy -p ibt --all-targets
+        run: cargo clippy --all-targets
